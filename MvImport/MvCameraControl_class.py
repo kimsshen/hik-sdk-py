@@ -11,7 +11,7 @@ from CameraParams_const import *
 from CameraParams_header import *
 from MvErrorDefine_const import *
 
-MvCamCtrldll = WinDLL("MvCameraControl.dll")
+MvCamCtrldll = WinDLL("C:\Program Files (x86)\Common Files\MVS\Runtime\Win64_x64\MvCameraControl.dll")
 
 # 用于回调函数传入相机实例
 class _MV_PY_OBJECT_(Structure):
