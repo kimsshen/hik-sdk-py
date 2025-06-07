@@ -18,6 +18,7 @@ import random
 from PIL import Image,ImageTk
 from ctypes import *
 from tkinter import ttk
+from datetime import datetime
 
 sys.path.append("../MvImport")
 from MvCameraControl_class import *
@@ -299,7 +300,10 @@ class CameraOperation():
         if(None == buf_cache):
             return
         self.buf_save_image = None
-        file_path = str(self.st_frame_info.nFrameNum) + ".jpg"
+
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = "HIK_"+  current_time    # 获取当前时间并格式化
+        file_path =  os.path.join("Image", filename + ".jpg")
         self.n_save_image_size = self.st_frame_info.nWidth * self.st_frame_info.nHeight * 3 + 2048
         if self.buf_save_image is None:
             self.buf_save_image = (c_ubyte * self.n_save_image_size)()
@@ -326,14 +330,36 @@ class CameraOperation():
             cdll.msvcrt.memcpy(byref(img_buff), stParam.pImageBuffer, stParam.nImageLen)
             file_open.write(img_buff)
             self.b_save_jpg = False
-            tkinter.messagebox.showinfo('show info','save jpg success!')
-        except:
+            #tkinter.messagebox.showinfo('show info','save jpg success!')
+            #显示原图片
+            #self.Show_jpg(file_path)
+            #显示预测以后的图片
+            #self.Show_jpg(file_path)
+        except Exception as e:
             self.b_save_jpg = False
             raise Exception("get one frame failed:%s" % e.message)
         if None != img_buff:
             del img_buff
         if None != self.buf_save_image:
             del self.buf_save_image
+
+
+    def Show_jpg(self,file_path):
+        try:
+            # 使用 with 语句打开图像文件
+            with Image.open(file_path) as img:
+            # 弹窗显示图片
+                img_window = tk.Toplevel()
+                img_window.title("保存的图片")
+                resized_img = img.resize((800, 600), Image.ANTIALIAS)
+                imgtk = ImageTk.PhotoImage(image=resized_img)
+                label = tk.Label(img_window, image=imgtk)
+                label.imgtk = imgtk
+                label.pack()
+        except Exception as e:
+            tkinter.messagebox.showerror('show error', f'显示图片失败: {str(e)}')
+            raise Exception(f"show image error :{str(e)}")
+ 
 
     def Save_Bmp(self,buf_cache):
         if(0 == buf_cache):
