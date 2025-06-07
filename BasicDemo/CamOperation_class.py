@@ -19,9 +19,13 @@ from PIL import Image,ImageTk
 from ctypes import *
 from tkinter import ttk
 from datetime import datetime
+from pathlib import Path
 
 sys.path.append("../MvImport")
 from MvCameraControl_class import *
+
+import model_test
+
 
 def Async_raise(tid, exctype):
     tid = ctypes.c_long(tid)
@@ -283,7 +287,7 @@ class CameraOperation():
                 numArray = CameraOperation.Color_numpy(self,img_buff,self.st_frame_info.nWidth,self.st_frame_info.nHeight)
 
             #合并OpenCV到Tkinter界面中
-            current_image = Image.fromarray(numArray).resize((800, 600), Image.ANTIALIAS) 
+            current_image = Image.fromarray(numArray).resize((800, 600), Image.Resampling.LANCZOS)
             imgtk = ImageTk.PhotoImage(image=current_image, master=root)
             panel.imgtk = imgtk       
             panel.config(image=imgtk) 
@@ -335,6 +339,7 @@ class CameraOperation():
             #self.Show_jpg(file_path)
             #显示预测以后的图片
             #self.Show_jpg(file_path)
+            self.Detect_jpg(file_path)
         except Exception as e:
             self.b_save_jpg = False
             raise Exception("get one frame failed:%s" % e.message)
@@ -344,6 +349,38 @@ class CameraOperation():
             del self.buf_save_image
 
 
+    def Detect_jpg(self,file_path):
+        # 配置参数，需要跟样本中的classes.txt中顺序一致
+        CLASS_NAMES \
+            = ['bone_front', 'bone_back', 'fish_front', 'fish_back', 'hedgehog_front', 'hedgehog_back', 'heart_front',
+               'heart_back', 'paw']  # 10种包装类型，4*2+1
+
+        # 使用预训练模型
+        model_path = "packaging_models/best.pt"
+
+        # 初始化检测系统
+        try:
+
+            detector = model_test.PackagingDetectionSystem(
+                model_path=model_path,
+                class_names=CLASS_NAMES,
+                conf_threshold=0.75,
+                iou_threshold=0.45
+            )
+        except Exception as e:
+            #logger.error(f"初始化检测系统失败: {str(e)}")
+            print(f"初始化检测系统失败: {str(e)}")
+            exit(1)
+
+        # 处理单个图像
+        # test_image = "测试图像/包装检测1.jpg"
+        status, result_path = detector.process_image(file_path)
+        # logger.info(f"单张图像检测结果: {status}")
+
+        print("包装检测流程完成!"+status + "path i:" +result_path)
+        self.Show_jpg(result_path)
+
+
     def Show_jpg(self,file_path):
         try:
             # 使用 with 语句打开图像文件
@@ -351,7 +388,7 @@ class CameraOperation():
             # 弹窗显示图片
                 img_window = tk.Toplevel()
                 img_window.title("保存的图片")
-                resized_img = img.resize((800, 600), Image.ANTIALIAS)
+                resized_img = img.resize((800, 600), Image.Resampling.LANCZOS)
                 imgtk = ImageTk.PhotoImage(image=resized_img)
                 label = tk.Label(img_window, image=imgtk)
                 label.imgtk = imgtk
