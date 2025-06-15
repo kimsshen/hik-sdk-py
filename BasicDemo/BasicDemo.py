@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # 创建上面的窗口，用于显示图片
     #top_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
     #top_page.place(x=0,y=0,height=600,width=900)
-    label_top_text = tk.Label(right_container, text='检测结果', width=30, height=1)
+    label_top_text = tk.Label(right_container, text='检测结果', width=15, height=1,font=("微软雅黑", 16))
     label_top_text.place(x=0,y=0)
 
     # 创建上面窗口的图像标签
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     #bottom_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
     #bottom_page.place(x=0,y=0,height=600,width=900)
     # 创建下面窗口的视频显示标签，需后续添加视频显示逻辑
-    label_bottom_text = tk.Label(right_container, text='实时视频', width=30, height=1)
+    label_bottom_text = tk.Label(right_container, text='实时视频', width=15, height=1,font=("微软雅黑", 16))
     label_bottom_text.place(x=0,y=601)
 
     bottom_panel = Label(right_container)
@@ -296,6 +296,12 @@ if __name__ == "__main__":
     btn_get_parameter.place(x=20, y=500)
     btn_set_parameter = tk.Button(left_container, text='Set Parameter', width=15, height=1, command = set_parameter)
     btn_set_parameter.place(x=160, y=500)
+
+
+    btn_detect_object = tk.Button(left_container, text='开始检测', width=15, height=1,font=("微软雅黑", 20), command = jpg_save)
+    btn_detect_object.place(x=20, y=600)
+
+
     window.mainloop()
 
     
