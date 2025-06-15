@@ -119,7 +119,7 @@ class CameraOperation():
                 print ("set trigger mode fail! ret[0x%x]" % ret)
             return 0
 
-    def Start_grabbing(self,root,panel):
+    def Start_grabbing(self,root,image_panel,video_panel):
         if False == self.b_start_grabbing and True == self.b_open_device:
             self.b_exit = False
             ret = self.obj_cam.MV_CC_StartGrabbing()
@@ -130,7 +130,7 @@ class CameraOperation():
             print ("start grabbing successfully!")
             try:
                 self.n_win_gui_id = random.randint(1,10000)
-                self.h_thread_handle = threading.Thread(target=CameraOperation.Work_thread, args=(self,root,panel))
+                self.h_thread_handle = threading.Thread(target=CameraOperation.Work_thread, args=(self,root,image_panel,video_panel))
                 self.h_thread_handle.start()
                 self.b_thread_closed = True
             except:
@@ -231,7 +231,7 @@ class CameraOperation():
 
             tkinter.messagebox.showinfo('show info','set parameter success!')
 
-    def Work_thread(self,root,panel):
+    def Work_thread(self,root,image_panel,video_panel):
         stOutFrame = MV_FRAME_OUT()  
         img_buff = None
         buf_cache = None
@@ -250,7 +250,7 @@ class CameraOperation():
                     img_buff = (c_ubyte * self.n_save_image_size)()
                 
                 if True == self.b_save_jpg:
-                    self.Save_jpg(buf_cache) #ch:保存Jpg图片 | en:Save Jpg
+                    self.Save_jpg(buf_cache,image_panel) #ch:保存Jpg图片 | en:Save Jpg
                 if True == self.b_save_bmp:
                     self.Save_Bmp(buf_cache) #ch:保存Bmp图片 | en:Save Bmp
             else:
@@ -289,8 +289,8 @@ class CameraOperation():
             #合并OpenCV到Tkinter界面中
             current_image = Image.fromarray(numArray).resize((800, 600), Image.Resampling.LANCZOS)
             imgtk = ImageTk.PhotoImage(image=current_image, master=root)
-            panel.imgtk = imgtk       
-            panel.config(image=imgtk) 
+            video_panel.imgtk = imgtk       
+            video_panel.config(image=imgtk) 
             root.obr = imgtk
             nRet = self.obj_cam.MV_CC_FreeImageBuffer(stOutFrame)
             if self.b_exit == True:
@@ -300,7 +300,7 @@ class CameraOperation():
                     del buf_cache
                 break
 
-    def Save_jpg(self,buf_cache):
+    def Save_jpg(self,buf_cache,panel):
         if(None == buf_cache):
             return
         self.buf_save_image = None
@@ -334,12 +334,9 @@ class CameraOperation():
             cdll.msvcrt.memcpy(byref(img_buff), stParam.pImageBuffer, stParam.nImageLen)
             file_open.write(img_buff)
             self.b_save_jpg = False
-            #tkinter.messagebox.showinfo('show info','save jpg success!')
-            #显示原图片
-            #self.Show_jpg(file_path)
-            #显示预测以后的图片
-            #self.Show_jpg(file_path)
-            self.Detect_jpg(file_path)
+            #识别图片中的目标
+            file_path = self.Detect_jpg(file_path)
+            self.Show_jpg(file_path,panel)
         except Exception as e:
             self.b_save_jpg = False
             raise Exception("get one frame failed:%s" % e.message)
@@ -378,21 +375,20 @@ class CameraOperation():
         # logger.info(f"单张图像检测结果: {status}")
 
         print("包装检测流程完成!"+status + "path i:" +result_path)
-        self.Show_jpg(result_path)
+        #self.Show_jpg(result_path)
+        return result_path
 
 
-    def Show_jpg(self,file_path):
+    def Show_jpg(self,file_path,panel):
         try:
             # 使用 with 语句打开图像文件
             with Image.open(file_path) as img:
-            # 弹窗显示图片
-                img_window = tk.Toplevel()
-                img_window.title("保存的图片")
-                resized_img = img.resize((800, 600), Image.Resampling.LANCZOS)
+                # 调整图片大小
+                resized_img = img.resize((900, 600), Image.Resampling.LANCZOS)
                 imgtk = ImageTk.PhotoImage(image=resized_img)
-                label = tk.Label(img_window, image=imgtk)
-                label.imgtk = imgtk
-                label.pack()
+                # 在 image_panel 上显示图片
+                panel.config(image=imgtk)
+                panel.image = imgtk
         except Exception as e:
             tkinter.messagebox.showerror('show error', f'显示图片失败: {str(e)}')
             raise Exception(f"show image error :{str(e)}")

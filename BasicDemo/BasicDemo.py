@@ -51,15 +51,59 @@ if __name__ == "__main__":
 
     #界面设计代码
     window = tk.Tk()
-    window.title('BasicDemo')
-    window.geometry('1150x650')
+    window.title('包装检测')
+    window.geometry('1280x1080')
+    a3 = window.maxsize()
+    print(a3)
     model_val = tk.StringVar()
     global triggercheck_val
     triggercheck_val = tk.IntVar()
-    page = Frame(window,height=400,width=60,relief=GROOVE,bd=5,borderwidth=4)
-    page.pack(expand=True, fill=BOTH)
-    panel = Label(page)
-    panel.place(x=190, y=10,height=600,width=1000)
+
+    # 创建左边的容器，用于放置按钮
+    #left_container = Frame(window)
+    #left_container.place(x=0,y=0,height=900,width=300)
+
+    # 假设按钮已经创建，这里添加到左边容器
+    # button = Button(left_container, text='示例按钮')
+    # button.pack()
+
+    # 创建右边的容器
+    #right_container = Frame(window)
+    #right_container.place(x=0,y=0,height=600,width=900)
+
+    # 创建主分割容器（水平方向）
+    paned_window = tk.PanedWindow(window, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5)
+    paned_window.pack(fill=tk.BOTH, expand=True)
+
+    # 左侧分区（添加 Frame）
+    left_container = tk.Frame(paned_window, bg="lightblue", width=300)
+    paned_window.add(left_container)
+
+    # 右侧分区（添加 Frame）
+    right_container = tk.Frame(paned_window, bg="lightblue", width=900)
+    paned_window.add(right_container)
+
+    # 创建上面的窗口，用于显示图片
+    #top_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
+    #top_page.place(x=0,y=0,height=600,width=900)
+    label_top_text = tk.Label(right_container, text='检测结果', width=30, height=1)
+    label_top_text.place(x=0,y=0)
+
+    # 创建上面窗口的图像标签
+    top_panel = Label(right_container)
+    top_panel.place(x=200,y=0,height=600,width=900)
+
+    # 创建下面的窗口，用于显示视频
+    #bottom_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
+    #bottom_page.place(x=0,y=0,height=600,width=900)
+    # 创建下面窗口的视频显示标签，需后续添加视频显示逻辑
+    label_bottom_text = tk.Label(right_container, text='实时视频', width=30, height=1)
+    label_bottom_text.place(x=0,y=601)
+
+    bottom_panel = Label(right_container)
+    bottom_panel.place(x=200,y=601,height=400,width=600)
+    
+
 
     #绑定下拉列表至设备信息索引
     def xFunc(event):
@@ -138,7 +182,7 @@ if __name__ == "__main__":
     # ch:开始取流 | en:Start grab image
     def start_grabbing():
         global obj_cam_operation
-        obj_cam_operation.Start_grabbing(window,panel)
+        obj_cam_operation.Start_grabbing(window,top_panel,bottom_panel)
 
     # ch:停止取流 | en:Stop grab image
     def stop_grabbing():
@@ -201,56 +245,56 @@ if __name__ == "__main__":
         obj_cam_operation.Set_parameter(obj_cam_operation.frame_rate,obj_cam_operation.exposure_time,obj_cam_operation.gain)
 
     xVariable = tkinter.StringVar()
-    device_list = ttk.Combobox(window, textvariable=xVariable,width=30)
+    device_list = ttk.Combobox(left_container, textvariable=xVariable,width=30)
     device_list.place(x=20, y=20)
     device_list.bind("<<ComboboxSelected>>", xFunc)
 
-    label_exposure_time = tk.Label(window, text='Exposure Time',width=15, height=1)
+    label_exposure_time = tk.Label(left_container, text='Exposure Time',width=15, height=1)
     label_exposure_time.place(x=20, y=350)
-    text_exposure_time = tk.Text(window,width=15, height=1)
+    text_exposure_time = tk.Text(left_container,width=15, height=1)
     text_exposure_time.place(x=160, y=350)
 
-    label_gain = tk.Label(window, text='Gain', width=15, height=1)
+    label_gain = tk.Label(left_container, text='Gain', width=15, height=1)
     label_gain.place(x=20, y=400)
-    text_gain = tk.Text(window,width=15, height=1)
+    text_gain = tk.Text(left_container,width=15, height=1)
     text_gain.place(x=160, y=400)
 
-    label_frame_rate = tk.Label(window, text='Frame Rate', width=15, height=1)
+    label_frame_rate = tk.Label(left_container, text='Frame Rate', width=15, height=1)
     label_frame_rate.place(x=20, y=450)
-    text_frame_rate  = tk.Text(window,width=15, height=1)
+    text_frame_rate  = tk.Text(left_container,width=15, height=1)
     text_frame_rate.place(x=160, y=450)
 
-    btn_enum_devices = tk.Button(window, text='Enum Devices', width=35, height=1, command = enum_devices )
+    btn_enum_devices = tk.Button(left_container, text='Enum Devices', width=35, height=1, command = enum_devices )
     btn_enum_devices.place(x=20, y=50)
-    btn_open_device = tk.Button(window, text='Open Device', width=15, height=1, command = open_device)
+    btn_open_device = tk.Button(left_container, text='Open Device', width=15, height=1, command = open_device)
     btn_open_device.place(x=20, y=100)
-    btn_close_device = tk.Button(window, text='Close Device', width=15, height=1, command = close_device)
+    btn_close_device = tk.Button(left_container, text='Close Device', width=15, height=1, command = close_device)
     btn_close_device.place(x=160, y=100)
 
-    radio_continuous = tk.Radiobutton(window, text='Continuous',variable=model_val, value='continuous',width=15, height=1,command=set_triggermode)
+    radio_continuous = tk.Radiobutton(left_container, text='Continuous',variable=model_val, value='continuous',width=15, height=1,command=set_triggermode)
     radio_continuous.place(x=20,y=150)
-    radio_trigger = tk.Radiobutton(window, text='Trigger Mode',variable=model_val, value='triggermode',width=15, height=1,command=set_triggermode)
+    radio_trigger = tk.Radiobutton(left_container, text='Trigger Mode',variable=model_val, value='triggermode',width=15, height=1,command=set_triggermode)
     radio_trigger.place(x=160,y=150)
     model_val.set(1)
 
-    btn_start_grabbing = tk.Button(window, text='Start Grabbing', width=15, height=1, command = start_grabbing )
+    btn_start_grabbing = tk.Button(left_container, text='Start Grabbing', width=15, height=1, command = start_grabbing )
     btn_start_grabbing.place(x=20, y=200)
-    btn_stop_grabbing = tk.Button(window, text='Stop Grabbing', width=15, height=1, command = stop_grabbing)
+    btn_stop_grabbing = tk.Button(left_container, text='Stop Grabbing', width=15, height=1, command = stop_grabbing)
     btn_stop_grabbing.place(x=160, y=200)
 
-    checkbtn_trigger_software = tk.Checkbutton(window, text='Tigger by Software', variable=triggercheck_val, onvalue=1, offvalue=0)
+    checkbtn_trigger_software = tk.Checkbutton(left_container, text='Tigger by Software', variable=triggercheck_val, onvalue=1, offvalue=0)
     checkbtn_trigger_software.place(x=20,y=250)
-    btn_trigger_once = tk.Button(window, text='Trigger Once', width=15, height=1, command = trigger_once)
+    btn_trigger_once = tk.Button(left_container, text='Trigger Once', width=15, height=1, command = trigger_once)
     btn_trigger_once.place(x=160, y=250)
 
-    btn_save_bmp = tk.Button(window, text='Save as BMP', width=15, height=1, command = bmp_save )
+    btn_save_bmp = tk.Button(left_container, text='Save as BMP', width=15, height=1, command = bmp_save )
     btn_save_bmp.place(x=20, y=300)
-    btn_save_jpg = tk.Button(window, text='Save as JPG', width=15, height=1, command = jpg_save)
+    btn_save_jpg = tk.Button(left_container, text='Save as JPG', width=15, height=1, command = jpg_save)
     btn_save_jpg.place(x=160, y=300)
 
-    btn_get_parameter = tk.Button(window, text='Get Parameter', width=15, height=1, command = get_parameter)
+    btn_get_parameter = tk.Button(left_container, text='Get Parameter', width=15, height=1, command = get_parameter)
     btn_get_parameter.place(x=20, y=500)
-    btn_set_parameter = tk.Button(window, text='Set Parameter', width=15, height=1, command = set_parameter)
+    btn_set_parameter = tk.Button(left_container, text='Set Parameter', width=15, height=1, command = set_parameter)
     btn_set_parameter.place(x=160, y=500)
     window.mainloop()
 
