@@ -45,7 +45,7 @@ class CameraOperation():
 
     def __init__(self,obj_cam,st_device_list,n_connect_num=0,b_open_device=False,b_start_grabbing = False,h_thread_handle=None,\
                 b_thread_closed=False,st_frame_info=None,b_exit=False,b_save_bmp=False,b_save_jpg=False,buf_save_image=None,\
-                n_save_image_size=0,n_win_gui_id=0,frame_rate=0,exposure_time=0,gain=0):
+                n_save_image_size=0,n_win_gui_id=0,frame_rate=0,exposure_time=0,gain=0,b_detect_object=False):
 
         self.obj_cam = obj_cam
         self.st_device_list = st_device_list
@@ -65,6 +65,7 @@ class CameraOperation():
         self.frame_rate = frame_rate
         self.exposure_time = exposure_time
         self.gain = gain
+        self.b_detect_object = b_detect_object
 
     def To_hex_str(self,num):
         chaDic = {10: 'a', 11: 'b', 12: 'c', 13: 'd', 14: 'e', 15: 'f'}
@@ -119,7 +120,7 @@ class CameraOperation():
                 print ("set trigger mode fail! ret[0x%x]" % ret)
             return 0
 
-    def Start_grabbing(self,root,image_panel,video_panel):
+    def Start_grabbing(self,root,image_panel,video_panel,label_status,label_result):
         if False == self.b_start_grabbing and True == self.b_open_device:
             self.b_exit = False
             ret = self.obj_cam.MV_CC_StartGrabbing()
@@ -130,7 +131,7 @@ class CameraOperation():
             print ("start grabbing successfully!")
             try:
                 self.n_win_gui_id = random.randint(1,10000)
-                self.h_thread_handle = threading.Thread(target=CameraOperation.Work_thread, args=(self,root,image_panel,video_panel))
+                self.h_thread_handle = threading.Thread(target=CameraOperation.Work_thread, args=(self,root,image_panel,video_panel,label_status,label_result))
                 self.h_thread_handle.start()
                 self.b_thread_closed = True
             except:
@@ -231,7 +232,7 @@ class CameraOperation():
 
             tkinter.messagebox.showinfo('show info','set parameter success!')
 
-    def Work_thread(self,root,image_panel,video_panel):
+    def Work_thread(self,root,image_panel,video_panel,label_status,label_result):
         stOutFrame = MV_FRAME_OUT()  
         img_buff = None
         buf_cache = None
@@ -244,7 +245,7 @@ class CameraOperation():
                 #获取到图像的时间开始节点获取到图像的时间开始节点
                 self.st_frame_info = stOutFrame.stFrameInfo
                 cdll.msvcrt.memcpy(byref(buf_cache), stOutFrame.pBufAddr, self.st_frame_info.nFrameLen)
-                print ("get one frame: Width[%d], Height[%d], nFrameNum[%d]"  % (self.st_frame_info.nWidth, self.st_frame_info.nHeight, self.st_frame_info.nFrameNum))
+                #print ("get one frame: Width[%d], Height[%d], nFrameNum[%d]"  % (self.st_frame_info.nWidth, self.st_frame_info.nHeight, self.st_frame_info.nFrameNum))
                 self.n_save_image_size = self.st_frame_info.nWidth * self.st_frame_info.nHeight * 3 + 2048
                 if img_buff is None:
                     img_buff = (c_ubyte * self.n_save_image_size)()
@@ -253,6 +254,8 @@ class CameraOperation():
                     self.Save_jpg(buf_cache,image_panel) #ch:保存Jpg图片 | en:Save Jpg
                 if True == self.b_save_bmp:
                     self.Save_Bmp(buf_cache) #ch:保存Bmp图片 | en:Save Bmp
+                if True == self.b_detect_object:
+                    self.Detect_object(buf_cache,image_panel,label_status,label_result)
             else:
                 print("no data, nret = "+self.To_hex_str(ret))
                 continue
@@ -279,7 +282,7 @@ class CameraOperation():
                 time_start=time.time()
                 ret = self.obj_cam.MV_CC_ConvertPixelType(stConvertParam)
                 time_end=time.time()
-                print('MV_CC_ConvertPixelType:',time_end - time_start) 
+                #print('MV_CC_ConvertPixelType:',time_end - time_start) 
                 if ret != 0:
                     tkinter.messagebox.showerror('show error','convert pixel fail! ret = '+self.To_hex_str(ret))
                     continue
@@ -334,8 +337,7 @@ class CameraOperation():
             cdll.msvcrt.memcpy(byref(img_buff), stParam.pImageBuffer, stParam.nImageLen)
             file_open.write(img_buff)
             self.b_save_jpg = False
-            #识别图片中的目标
-            file_path = self.Detect_jpg(file_path)
+            #在面板上显示保存的图片
             self.Show_jpg(file_path,panel)
         except Exception as e:
             self.b_save_jpg = False
@@ -345,8 +347,53 @@ class CameraOperation():
         if None != self.buf_save_image:
             del self.buf_save_image
 
+    def Detect_object(self, buf_cache, panel,label_status,label_result):
+        if (None == buf_cache):
+            return
+        self.buf_save_image = None
 
-    def Detect_jpg(self,file_path):
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = "HIK_" + current_time  # 获取当前时间并格式化
+        file_path = os.path.join("Image", filename + ".jpg")
+        self.n_save_image_size = self.st_frame_info.nWidth * self.st_frame_info.nHeight * 3 + 2048
+        if self.buf_save_image is None:
+            self.buf_save_image = (c_ubyte * self.n_save_image_size)()
+
+        stParam = MV_SAVE_IMAGE_PARAM_EX()
+        stParam.enImageType = MV_Image_Jpeg;  # ch:需要保存的图像类型 | en:Image format to save
+        stParam.enPixelType = self.st_frame_info.enPixelType  # ch:相机对应的像素格式 | en:Camera pixel type
+        stParam.nWidth = self.st_frame_info.nWidth  # ch:相机对应的宽 | en:Width
+        stParam.nHeight = self.st_frame_info.nHeight  # ch:相机对应的高 | en:Height
+        stParam.nDataLen = self.st_frame_info.nFrameLen
+        stParam.pData = cast(buf_cache, POINTER(c_ubyte))
+        stParam.pImageBuffer = cast(byref(self.buf_save_image), POINTER(c_ubyte))
+        stParam.nBufferSize = self.n_save_image_size  # ch:存储节点的大小 | en:Buffer node size
+        stParam.nJpgQuality = 80;  # ch:jpg编码，仅在保存Jpg图像时有效。保存BMP时SDK内忽略该参数
+        return_code = self.obj_cam.MV_CC_SaveImageEx2(stParam)
+
+        if return_code != 0:
+            tkinter.messagebox.showerror('show error', 'save jpg fail! ret = ' + self.To_hex_str(return_code))
+            self.b_detect_object = False
+            return
+        file_open = open(file_path.encode('ascii'), 'wb+')
+        img_buff = (c_ubyte * stParam.nImageLen)()
+        try:
+            cdll.msvcrt.memcpy(byref(img_buff), stParam.pImageBuffer, stParam.nImageLen)
+            file_open.write(img_buff)
+            self.b_detect_object = False
+            # 识别图片中的目标
+            file_path = self.Predict_jpg(file_path,label_status,label_result)
+            self.Show_jpg(file_path, panel)
+        except Exception as e:
+            self.b_detect_object = False
+            raise Exception("get one frame failed:%s" % e.message)
+        if None != img_buff:
+            del img_buff
+        if None != self.buf_save_image:
+            del self.buf_save_image
+
+    def Predict_jpg(self,file_path,label_status,label_result):
+
         # 配置参数，需要跟样本中的classes.txt中顺序一致
         CLASS_NAMES \
             = ['bone_front', 'bone_back', 'fish_front', 'fish_back', 'hedgehog_front', 'hedgehog_back', 'heart_front',
@@ -371,12 +418,26 @@ class CameraOperation():
 
         # 处理单个图像
         # test_image = "测试图像/包装检测1.jpg"
-        status, result_path = detector.process_image(file_path)
+        status, result_path, message = detector.process_image(file_path)
         # logger.info(f"单张图像检测结果: {status}")
-
         print("包装检测流程完成!"+status + "path i:" +result_path)
+        #显示结果到面板上
+        self.Update_status(status,label_status)
+        self.Update_result(message,label_result)
         #self.Show_jpg(result_path)
         return result_path
+
+    #显示结果ng和ok
+    def Update_status(self,signal,label_status):
+        if signal == 'NG':
+            label_status.config(text='NG', bg='red')
+        elif signal == 'OK':
+            label_status.config(text='OK', bg='green')
+
+
+    #显示结果详情
+    def Update_result(self,message,label_result):
+        label_result.config(text=message)
 
 
     def Show_jpg(self,file_path,panel):
@@ -392,7 +453,16 @@ class CameraOperation():
         except Exception as e:
             tkinter.messagebox.showerror('show error', f'显示图片失败: {str(e)}')
             raise Exception(f"show image error :{str(e)}")
- 
+
+
+
+
+    #显示详细的结果，比如缺少什么，多了什么
+    def Show_result(self,signal,label_status):
+        if signal == 'ng':
+            label_status.config(text='NG', bg='red')
+        elif signal == 'ok':
+            label_status.config(text='OK', bg='green')
 
     def Save_Bmp(self,buf_cache):
         if(0 == buf_cache):

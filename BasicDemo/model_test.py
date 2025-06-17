@@ -323,7 +323,7 @@ class PackagingDetectionSystem:
             # 保存检测结果到CSV
             self.save_results_to_csv(image_path, detections, status, output_path)
             
-            return status, str(result_filepath)
+            return status, str(result_filepath) ,message
         
         except Exception as e:
             logger.error(f"处理图像时出错: {str(e)}", exc_info=True)

@@ -59,18 +59,6 @@ if __name__ == "__main__":
     global triggercheck_val
     triggercheck_val = tk.IntVar()
 
-    # 创建左边的容器，用于放置按钮
-    #left_container = Frame(window)
-    #left_container.place(x=0,y=0,height=900,width=300)
-
-    # 假设按钮已经创建，这里添加到左边容器
-    # button = Button(left_container, text='示例按钮')
-    # button.pack()
-
-    # 创建右边的容器
-    #right_container = Frame(window)
-    #right_container.place(x=0,y=0,height=600,width=900)
-
     # 创建主分割容器（水平方向）
     paned_window = tk.PanedWindow(window, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=5)
     paned_window.pack(fill=tk.BOTH, expand=True)
@@ -86,8 +74,17 @@ if __name__ == "__main__":
     # 创建上面的窗口，用于显示图片
     #top_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
     #top_page.place(x=0,y=0,height=600,width=900)
-    label_top_text = tk.Label(right_container, text='检测结果', width=15, height=1,font=("微软雅黑", 16))
+    label_top_text = tk.Label(right_container, text='检测结果', width=15, height=1,font=('微软雅黑', 16))
     label_top_text.place(x=0,y=0)
+
+    # 新增状态文本框
+    label_status = tk.Label(right_container, width=6, height=1,font=('微软雅黑', 40))
+    label_status.place(x=0, y=40)
+
+
+    # 新增文本框-结果详细清单
+    label_result = tk.Label(right_container, width=12, height=1, justify='left', font=('微软雅黑', 20)) # 增加 wraplength 和 justify 参数以支持分行显示，height 可根据需要调整
+    label_result.place(x=0, y=150)
 
     # 创建上面窗口的图像标签
     top_panel = Label(right_container)
@@ -182,7 +179,7 @@ if __name__ == "__main__":
     # ch:开始取流 | en:Start grab image
     def start_grabbing():
         global obj_cam_operation
-        obj_cam_operation.Start_grabbing(window,top_panel,bottom_panel)
+        obj_cam_operation.Start_grabbing(window,top_panel,bottom_panel,label_status,label_result)
 
     # ch:停止取流 | en:Stop grab image
     def stop_grabbing():
@@ -224,6 +221,10 @@ if __name__ == "__main__":
         global obj_cam_operation
         obj_cam_operation.b_save_jpg = True
 
+    def detect_object():
+        global obj_cam_operation
+        obj_cam_operation.b_detect_object = True
+
     def get_parameter():
         global obj_cam_operation
         obj_cam_operation.Get_parameter()
@@ -264,11 +265,11 @@ if __name__ == "__main__":
     text_frame_rate  = tk.Text(left_container,width=15, height=1)
     text_frame_rate.place(x=160, y=450)
 
-    btn_enum_devices = tk.Button(left_container, text='Enum Devices', width=35, height=1, command = enum_devices )
+    btn_enum_devices = tk.Button(left_container, text='发现设备', width=35, height=1, command = enum_devices )
     btn_enum_devices.place(x=20, y=50)
-    btn_open_device = tk.Button(left_container, text='Open Device', width=15, height=1, command = open_device)
+    btn_open_device = tk.Button(left_container, text='打开相机', width=15, height=1, command = open_device)
     btn_open_device.place(x=20, y=100)
-    btn_close_device = tk.Button(left_container, text='Close Device', width=15, height=1, command = close_device)
+    btn_close_device = tk.Button(left_container, text='关闭相机', width=15, height=1, command = close_device)
     btn_close_device.place(x=160, y=100)
 
     radio_continuous = tk.Radiobutton(left_container, text='Continuous',variable=model_val, value='continuous',width=15, height=1,command=set_triggermode)
@@ -277,9 +278,9 @@ if __name__ == "__main__":
     radio_trigger.place(x=160,y=150)
     model_val.set(1)
 
-    btn_start_grabbing = tk.Button(left_container, text='Start Grabbing', width=15, height=1, command = start_grabbing )
+    btn_start_grabbing = tk.Button(left_container, text='开始采集', width=15, height=1, command = start_grabbing )
     btn_start_grabbing.place(x=20, y=200)
-    btn_stop_grabbing = tk.Button(left_container, text='Stop Grabbing', width=15, height=1, command = stop_grabbing)
+    btn_stop_grabbing = tk.Button(left_container, text='关闭采集', width=15, height=1, command = stop_grabbing)
     btn_stop_grabbing.place(x=160, y=200)
 
     checkbtn_trigger_software = tk.Checkbutton(left_container, text='Tigger by Software', variable=triggercheck_val, onvalue=1, offvalue=0)
@@ -298,7 +299,7 @@ if __name__ == "__main__":
     btn_set_parameter.place(x=160, y=500)
 
 
-    btn_detect_object = tk.Button(left_container, text='开始检测', width=15, height=1,font=("微软雅黑", 20), command = jpg_save)
+    btn_detect_object = tk.Button(left_container, text='开始检测', width=15, height=1,font=("微软雅黑", 20), command = detect_object)
     btn_detect_object.place(x=20, y=600)
 
 
