@@ -208,8 +208,8 @@ class PackagingDetectionSystem:
         # 设置字体
         try:
             # 尝试加载中文字体 (需要系统中存在该字体)
-            font = ImageFont.truetype("simhei.ttf", 30)
-            small_font = ImageFont.truetype("simhei.ttf", 24)
+            font = ImageFont.truetype("simhei.ttf", 40)
+            small_font = ImageFont.truetype("simhei.ttf", 30)
         except:
             # 如果无法加载中文字体，使用默认字体
             font = ImageFont.load_default(100)
@@ -258,26 +258,25 @@ class PackagingDetectionSystem:
         
         # 添加状态文本
         status_color = (0, 200, 0) if status == "OK" else (255, 0, 0)
-        draw.text((50, 50), f"状态: {status} - {message}", fill=status_color, font=font)
+        draw.text((50, 50), f"检测结果: {status}", fill=status_color, font=font)
         
         # 添加类别统计信息
-        stats_y = 60
+        stats_y = 100
         for class_name, count in class_counts.items():
-            required = "✓" if count == 1 else "✗"
+            required = "ok" if count == 1 else "ng"
             color = (0, 200, 0) if count == 1 else (255, 0, 0)
             
             stats_text = f"{class_name}: {count}个 ({required})"
-            draw.text((50, stats_y), stats_text, fill=color, font=small_font)
-            stats_y += 35
+            draw.text((50, stats_y), stats_text, fill=color, font=font)
+            stats_y += 50
         
         # 添加总检测数量
         total_detections = len(detections)
-        required_text = "✓" if total_detections == self.num_classes else "✗"
-        total_color = (0, 200, 0) if total_detections == self.num_classes else (255, 0, 0)
+
         draw.text(
             (50, stats_y + 20),
-            f"总检测数: {total_detections}个 ({required_text})", 
-            fill=total_color, 
+            f"总检测数: {total_detections}个 ({status}- {message})",
+            fill=status_color,
             font=font
         )
         
