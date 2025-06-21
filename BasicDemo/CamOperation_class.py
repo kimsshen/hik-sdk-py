@@ -394,10 +394,24 @@ class CameraOperation():
 
     def Predict_jpg(self,file_path,label_status,label_result):
 
-        # 配置参数，需要跟样本中的classes.txt中顺序一致
-        CLASS_NAMES \
-            = ['bone_front', 'bone_back', 'fish_front', 'fish_back', 'hedgehog_front', 'hedgehog_back', 'heart_front',
-               'heart_back', 'paw']  # 10种包装类型，4*2+1
+        # 配置参数，需要跟样本中的classes.txt中顺序一致，区分正反面种类
+        CLASS_NAMES = ['bone_front', 'bone_back', \
+                       'fish_front', 'fish_back', \
+                       'hedgehog_front', 'hedgehog_back', \
+                       'heart_front', 'heart_back', \
+                       'paw']  # 9种包装类型，4*2+1\n\n
+        # 定义映射字典\n
+        CLASS_MAPPING = {'bone_front': 'bone', 'bone_back': 'bone', \
+                         'fish_front': 'fish', 'fish_back': 'fish', \
+                         'hedgehog_front': 'hedgehog', 'hedgehog_back': 'hedgehog', \
+                         'heart_front': 'heart', 'heart_back': 'heart', \
+                         'paw': 'paw'}
+        #不去分正反面的种类
+        OBJECT_CLASS_NAMES = ['bone',
+                              'fish', \
+                              'hedgehog', \
+                              'heart', \
+                              'paw']
 
         # 使用预训练模型
         model_path = "packaging_models/best.pt"
@@ -408,6 +422,8 @@ class CameraOperation():
             detector = model_test.PackagingDetectionSystem(
                 model_path=model_path,
                 class_names=CLASS_NAMES,
+                class_mapping=CLASS_MAPPING,
+                object_class_names=OBJECT_CLASS_NAMES,
                 conf_threshold=0.75,
                 iou_threshold=0.45
             )
