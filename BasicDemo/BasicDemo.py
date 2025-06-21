@@ -52,9 +52,9 @@ if __name__ == "__main__":
     #界面设计代码
     window = tk.Tk()
     window.title('包装检测')
-    window.geometry('1280x1080')
-    a3 = window.maxsize()
-    print(a3)
+    window.geometry('1440x1080')
+    # a3 = window.maxsize()
+    # print(a3)
     model_val = tk.StringVar()
     global triggercheck_val
     triggercheck_val = tk.IntVar()
@@ -67,39 +67,13 @@ if __name__ == "__main__":
     left_container = tk.Frame(paned_window, bg="lightblue", width=300)
     paned_window.add(left_container)
 
+    # 中间分区（添加 Frame）
+    middle_container = tk.Frame(paned_window, bg="lightblue", width=900)
+    paned_window.add(middle_container)
+
     # 右侧分区（添加 Frame）
-    right_container = tk.Frame(paned_window, bg="lightblue", width=900)
+    right_container = tk.Frame(paned_window, bg="lightblue", width=300)
     paned_window.add(right_container)
-
-    # 创建上面的窗口，用于显示图片
-    #top_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
-    #top_page.place(x=0,y=0,height=600,width=900)
-    label_top_text = tk.Label(right_container, text='检测结果', width=15, height=1,font=('微软雅黑', 16))
-    label_top_text.place(x=0,y=0)
-
-    # 新增状态文本框
-    label_status = tk.Label(right_container, width=6, height=1,font=('微软雅黑', 40))
-    label_status.place(x=0, y=40)
-
-
-    # 新增文本框-结果详细清单
-    label_result = tk.Label(right_container, width=12, height=1, justify='left', font=('微软雅黑', 20)) # 增加 wraplength 和 justify 参数以支持分行显示，height 可根据需要调整
-    label_result.place(x=0, y=150)
-
-    # 创建上面窗口的图像标签
-    top_panel = Label(right_container)
-    top_panel.place(x=200,y=0,height=600,width=900)
-
-    # 创建下面的窗口，用于显示视频
-    #bottom_page = Frame(right_container, relief=GROOVE, bd=5, borderwidth=4)
-    #bottom_page.place(x=0,y=0,height=600,width=900)
-    # 创建下面窗口的视频显示标签，需后续添加视频显示逻辑
-    label_bottom_text = tk.Label(right_container, text='实时视频', width=15, height=1,font=("微软雅黑", 16))
-    label_bottom_text.place(x=0,y=601)
-
-    bottom_panel = Label(right_container)
-    bottom_panel.place(x=200,y=601,height=400,width=600)
-    
 
 
     #绑定下拉列表至设备信息索引
@@ -299,9 +273,38 @@ if __name__ == "__main__":
     btn_set_parameter.place(x=160, y=500)
 
 
-    btn_detect_object = tk.Button(left_container, text='开始检测', width=15, height=1,font=("微软雅黑", 20), command = detect_object)
-    btn_detect_object.place(x=20, y=600)
 
+
+    # 创建上面的窗口，用于显示图片
+    # 统一宽度值，可根据需要调整
+
+    label_top_text = tk.Label(right_container, text='检测结果', width=17, height=1, font=('微软雅黑', 16))
+    label_top_text.place(x=0, y=5)
+
+    # 新增状态文本框
+    label_status = tk.Label(right_container, width=7, height=1, font=('微软雅黑', 40))
+    label_status.place(x=0, y=45)
+
+    # 新增文本框-结果详细清单
+    label_result = tk.Label(right_container, width=17, height=8, wraplength=230, justify='left', anchor='w', font=('微软雅黑', 16))
+    label_result.place(x=0, y=125)
+
+    # 添加检测的按钮
+    btn_detect_object = tk.Button(right_container, text='开始检测', width=14, height=1,font=('微软雅黑', 20), command = detect_object)
+    btn_detect_object.place(x=1, y=800)
+
+
+    # 创建上面窗口的图像标签
+    top_panel = Label(middle_container)
+    top_panel.place(x=0, y=0, height=600, width=900)
+
+    # 创建下面的视频
+    bottom_panel = Label(middle_container)
+    bottom_panel.place(x=0, y=601, height=400, width=600)
+
+    # 创建下面窗口的视频显示标签，需后续添加视频显示逻辑
+    label_bottom_text = tk.Label(middle_container, text='实时视频', width=23, height=1, font=('微软雅黑', 16))
+    label_bottom_text.place(x=601, y=601)
 
     window.mainloop()
 
