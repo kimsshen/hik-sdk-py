@@ -290,7 +290,7 @@ class CameraOperation():
                 numArray = CameraOperation.Color_numpy(self,img_buff,self.st_frame_info.nWidth,self.st_frame_info.nHeight)
 
             #合并OpenCV到Tkinter界面中
-            current_image = Image.fromarray(numArray).resize((800, 600), Image.Resampling.LANCZOS)
+            current_image = Image.fromarray(numArray).resize((768, 512), Image.Resampling.LANCZOS)
             imgtk = ImageTk.PhotoImage(image=current_image, master=root)
             video_panel.imgtk = imgtk       
             video_panel.config(image=imgtk) 
