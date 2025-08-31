@@ -1,0 +1,12 @@
+# 忽略整个 .idea 目录及其所有内容
+.idea/*
+
+
+#注释文件
+*.jpg
+*.txt
+*.png
+*.csv
+*.log
+*.pt
+*.cache
