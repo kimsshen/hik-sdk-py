@@ -10,7 +10,8 @@ import shutil
 
 
 from PIL import Image, ImageDraw, ImageFont
-import BasicModel
+
+from .BasicModel import BasicModel
 
 
 # 配置日志系统
@@ -18,14 +19,14 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("packaging_inspection.log"),
+        logging.FileHandler("IronClassifyModel.log"),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger("PackagingInspector")
 
 class IronClassifyModel(BasicModel):
-    def __init__(self, model_path, class_names, class_mapping, object_class_names, conf_threshold=0.6, iou_threshold=0.45):
+    def __init__(self, model_path, conf_threshold=0.6, iou_threshold=0.45):
         """
         初始化包装检测系统
         :param model_path: 训练好的模型权重路径
@@ -46,10 +47,26 @@ class IronClassifyModel(BasicModel):
         # 设置模型参数
         self.model.conf = conf_threshold  # 置信度阈值
         self.model.iou = iou_threshold    # IOU阈值
-        self.class_names = class_names    # 类别名称
-        self.class_mapping = class_mapping  #类别映射关系
-        self.object_class_names = object_class_names #不区分正反面的物体类别名称
-        self.num_classes = len(class_names)  # 类别数量
+         # 配置参数，需要跟样本中的classes.txt中顺序一致，区分正反面种类
+        self.class_names = ['bone_front', 'bone_back', \
+                       'fish_front', 'fish_back', \
+                       'hedgehog_front', 'hedgehog_back', \
+                       'heart_front', 'heart_back', \
+                       'paw']  
+        # 定义映射字典
+        self.class_mapping = {'bone_front': 'bone', 'bone_back': 'bone', \
+                         'fish_front': 'fish', 'fish_back': 'fish', \
+                         'hedgehog_front': 'hedgehog', 'hedgehog_back': 'hedgehog', \
+                         'heart_front': 'heart', 'heart_back': 'heart', \
+                         'paw': 'paw'}
+        #不去分正反面的种类                 
+        self.object_class_names = ['bone',
+                              'fish', \
+                              'hedgehog', \
+                              'heart', \
+                              'paw'] 
+        
+        self.num_classes = len(self.class_names)  # 类别数量
        
         
         # 设置设备（自动选择GPU或CPU）
@@ -60,7 +77,7 @@ class IronClassifyModel(BasicModel):
         self.colors = self._generate_colors(self.num_classes)
         
         logger.info(f"模型加载成功! 使用设备: {self.device}")
-        logger.info(f"检测类别: {class_names}")
+        logger.info(f"检测类别: {self.class_names}")
         logger.info(f"置信度阈值: {conf_threshold}, IOU阈值: {iou_threshold}")
 
     def _generate_colors(self, n):
@@ -290,6 +307,7 @@ class IronClassifyModel(BasicModel):
         # 转换回numpy数组
         return np.array(pil_img)
 
+
     def process_image(self, image_path, output_dir="results"):
         """
         处理单张图像并保存结果
@@ -303,15 +321,18 @@ class IronClassifyModel(BasicModel):
             # 加载图像
             img = self.load_image(image_path)
             
+            # 转换颜色空间 (BGR to RGB)
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
             # 执行物体检测
-            detections = self.detect_objects(img)
+            detections = self.detect_objects(img_rgb)
             
             # 分析检测结果
             status, message, class_counts = self.analyze_detections(detections)
             logger.info(f"检测结果: {status} - {message}")
             
             # 可视化结果
-            result_img = self.visualize_results(img, detections, status, message, class_counts)
+            result_img = self.visualize_results(img_rgb, detections, status, message, class_counts)
             
             # 创建输出目录
             output_path = Path(output_dir)

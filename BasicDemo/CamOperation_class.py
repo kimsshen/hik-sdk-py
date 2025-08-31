@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.append("../MvImport")
 from MvCameraControl_class import *
 
-import model_test
+from DetectFactory import DetectFactory
 
 
 def Async_raise(tid, exctype):
@@ -394,47 +394,18 @@ class CameraOperation():
 
     def Predict_jpg(self,file_path,label_status,label_result):
 
-        # 配置参数，需要跟样本中的classes.txt中顺序一致，区分正反面种类
-        CLASS_NAMES = ['bone_front', 'bone_back', \
-                       'fish_front', 'fish_back', \
-                       'hedgehog_front', 'hedgehog_back', \
-                       'heart_front', 'heart_back', \
-                       'paw']  # 9种包装类型，4*2+1\n\n
-        # 定义映射字典\n
-        CLASS_MAPPING = {'bone_front': 'bone', 'bone_back': 'bone', \
-                         'fish_front': 'fish', 'fish_back': 'fish', \
-                         'hedgehog_front': 'hedgehog', 'hedgehog_back': 'hedgehog', \
-                         'heart_front': 'heart', 'heart_back': 'heart', \
-                         'paw': 'paw'}
-        #不去分正反面的种类
-        OBJECT_CLASS_NAMES = ['bone',
-                              'fish', \
-                              'hedgehog', \
-                              'heart', \
-                              'paw']
+        detectModel = None
 
-        # 使用预训练模型
-        model_path = "packaging_models/best.pt"
-
-        # 初始化检测系统
         try:
+            detectModel = DetectFactory.create_detector("ironclassify")
 
-            detector = model_test.PackagingDetectionSystem(
-                model_path=model_path,
-                class_names=CLASS_NAMES,
-                class_mapping=CLASS_MAPPING,
-                object_class_names=OBJECT_CLASS_NAMES,
-                conf_threshold=0.75,
-                iou_threshold=0.45
-            )
         except Exception as e:
-            #logger.error(f"初始化检测系统失败: {str(e)}")
-            print(f"初始化检测系统失败: {str(e)}")
-            exit(1)
+            tkinter.messagebox.showerror('show error', f'创建检测器失败: {str(e)}')
+            raise Exception(f"create detector error :{str(e)}")
 
         # 处理单个图像
         # test_image = "测试图像/包装检测1.jpg"
-        status, result_path, message = detector.process_image(file_path)
+        status, result_path, message = detectModel.process_image(file_path)
         # logger.info(f"单张图像检测结果: {status}")
         print("包装检测流程完成!"+status + "path i:" +result_path)
         #显示结果到面板上

@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import torch
 import cv2
 import numpy as np
@@ -22,9 +24,8 @@ logging.basicConfig(
 logger = logging.getLogger("PackagingInspector")
 
 class BasicModel:
-    def __init__(self):
-        pass
 
+    @abstractmethod
     def load_image(self, image_path):
         """
         加载图像并进行预处理
@@ -33,6 +34,7 @@ class BasicModel:
         """
         pass
 
+    @abstractmethod
     def predict_objects(self, image):
         """
         执行物体检测
@@ -41,6 +43,7 @@ class BasicModel:
         """
         pass
 
+    @abstractmethod
     def analyze_detections(self, detections):
         """
         分析检测结果并判断是否符合条件
@@ -52,6 +55,7 @@ class BasicModel:
         """
         pass
 
+    @abstractmethod
     def visualize_results(self, image, detections, status, message, class_counts):
         """
         可视化检测结果
@@ -64,6 +68,7 @@ class BasicModel:
         """
         pass
 
+    @abstractmethod
     def process_image(self, image_path, output_dir="results"):
         """
         处理单张图像并保存结果
@@ -73,6 +78,7 @@ class BasicModel:
         """
         pass
 
+    @abstractmethod
     def save_results_to_csv(self, image_path, detections, status, output_dir):
         """
         保存检测结果到CSV文件
@@ -83,6 +89,7 @@ class BasicModel:
         """
         pass
 
+    @abstractmethod
     def process_batch(self, image_dir, output_dir="results"):
         """
         批量处理目录中的所有图像
@@ -92,7 +99,7 @@ class BasicModel:
         """
         pass
 
-
+    @abstractmethod
     def quick_empty_directory(directory_path):
         """
         快速清空目录 - 删除整个目录后重新创建
