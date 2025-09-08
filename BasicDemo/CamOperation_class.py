@@ -397,7 +397,7 @@ class CameraOperation():
         detectModel = None
 
         try:
-            detectModel = DetectFactory.create_detector("ironclassify")
+            detectModel = DetectFactory.create_detector("irondefect")
 
         except Exception as e:
             tkinter.messagebox.showerror('show error', f'创建检测器失败: {str(e)}')

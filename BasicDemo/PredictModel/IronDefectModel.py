@@ -1,7 +1,7 @@
 import torch
 import cv2
 import numpy as np
-import os
+import sys, os
 import time
 from pathlib import Path
 import pandas as pd
@@ -12,6 +12,16 @@ import shutil
 from PIL import Image, ImageDraw, ImageFont
 from .BasicModel import BasicModel
 
+# 将 yolov5 目录添加到模块搜索路径,先退出当前目录的yolov5目录
+yolov5_path = os.path.join(os.path.dirname(__file__), "..",'yolov5')
+if yolov5_path not in sys.path:
+    sys.path.insert(0, yolov5_path)
+
+from utils.general import non_max_suppression
+
+# print("当前 Python 模块搜索路径 (sys.path):")
+# for i, path in enumerate(sys.path):
+#     print(f"{i+1:2d}. {path}")
 
 # 配置日志系统
 logging.basicConfig(
@@ -25,33 +35,11 @@ logging.basicConfig(
 logger = logging.getLogger("PackagingInspector")
 
 class IronDefectModel(BasicModel):
-    # 配置参数，需要跟样本中的classes.txt中顺序一致，区分正反面种类
-    CLASS_NAMES = ['bone_front', 'bone_back',
-                    'fish_front', 'fish_back', 
-                    'hedgehog_front', 'hedgehog_back', 
-                    'heart_front', 'heart_back', 
-                    'paw']  # 9种包装类型，4*2+1
-    
-    # 定义映射字典
-    CLASS_MAPPING = { 'bone_front': 'bone','bone_back': 'bone',
-                    'fish_front': 'fish','fish_back': 'fish',
-                    'hedgehog_front': 'hedgehog','hedgehog_back': 'hedgehog',
-                    'heart_front': 'heart','heart_back': 'heart',
-                    'paw': 'paw' }
 
-    OBJECT_CLASS_NAMES = ['bone', 
-                        'fish', 
-                        'hedgehog', 
-                        'heart', 
-                        'paw']
-                         
-    def __init__(self, model_path, class_names=None, class_mapping=None, object_class_names=None, conf_threshold=0.6, iou_threshold=0.45):
+    def __init__(self, model_path, conf_threshold=0.6, iou_threshold=0.45):
         """
         初始化包装检测系统
         :param model_path: 训练好的模型权重路径
-        :param class_names: 类别名称列表 (必须与训练时的类别顺序一致)
-        :param class_mapping: 类别映射关系
-        :param object_class_names: 不区分正反面的物体类别名称
         :param conf_threshold: 置信度阈值 (0-1)
         :param iou_threshold: IOU阈值 (0-1)
         """
@@ -67,9 +55,8 @@ class IronDefectModel(BasicModel):
             exit(1)
             
         # 设置类别参数，使用传入的参数或默认值
-        self.class_names = class_names if class_names is not None else self.CLASS_NAMES
-        self.class_mapping = class_mapping if class_mapping is not None else self.CLASS_MAPPING
-        self.object_class_names = object_class_names if object_class_names is not None else self.OBJECT_CLASS_NAMES
+        self.class_names = ['Blistering', 'Cloudiness', \
+                       'OrangePeel', 'Scrape']
         self.num_classes = len(self.class_names)  # 类别数量
             
         # 设置模型参数
@@ -142,11 +129,14 @@ class IronDefectModel(BasicModel):
         
         # 使用模型进行推理 (禁用梯度计算以提高效率)
         with torch.no_grad():
-            results = self.model(input_tensor)
-        
-        # 解析检测结果
-        pred = results.pred[0].cpu().numpy()  # (n, 6) -> [x1, y1, x2, y2, conf, cls]
-        detections = pred[pred[:, 4] >= self.model.conf]  # 按置信度过滤
+            results  = self.model(input_tensor)
+
+        # 后处理：NMS
+        pred = non_max_suppression(results, conf_thres=self.model.conf, iou_thres=self.model.iou)[0]
+        if pred is not None:
+            detections = pred.cpu().numpy()  # shape: (n, 6) -> [x1, y1, x2, y2, conf, cls]
+        else:
+            detections = np.zeros((0, 6))
         
         # 记录推理时间
         inference_time = time.time() - start_time
@@ -164,15 +154,13 @@ class IronDefectModel(BasicModel):
             message: 状态描述
             class_counts: 每个类别的检测数量
         """
-        # 过滤低置信度的检测
-        valid_detections = detections[detections['confidence'] > self.model.conf]
-        
         # 如果没有检测到任何缺陷
-        if len(valid_detections) == 0:
-            return "OK", "未检测到任何缺陷", {}
+        if len(detections) == 0:
+            class_counts = {name: 0 for name in self.class_names}
+            return "OK", "未检测到任何缺陷", class_counts
         
         # 获取检测到的类别ID
-        detected_class_ids = valid_detections['class'].astype(int).tolist()
+        detected_class_ids = detections['class'].astype(int).tolist()
         
         # 统计每个类别的检测数量
         class_counts={}
