@@ -102,18 +102,18 @@ class IronDefectModel(BasicModel):
             raise FileNotFoundError(f"无法加载图像: {image_path}")
         
         orig_shape = original_img.shape  # (H, W)
-        
+
+        rgb_img = cv2.cvtColor(original_img, cv2.COLOR_GRAY2RGB)
         # 调整大小
-        resized_img = cv2.resize(original_img, (img_size, img_size))
-        
-        # 复制为三通道（模拟 RGB 灰度图）
-        rgb_img = np.stack([resized_img] * 3, axis=-1)  # (H, W, 3)
+        resized_rgb_img = cv2.resize(rgb_img, (img_size, img_size))
+
+
         
         # 转为 Tensor 并归一化 [0,1]
-        rgb_img = rgb_img.astype(np.float32) / 255.0
-        input_tensor = torch.from_numpy(rgb_img).permute(2, 0, 1).unsqueeze(0).to(self.device)  # (1, 3, H, W)
+        resized_rgb_img = resized_rgb_img.astype(np.float32) / 255.0
+        input_tensor = torch.from_numpy(resized_rgb_img).permute(2, 0, 1).unsqueeze(0).to(self.device)  # (1, 3, H, W)
         
-        return original_img, input_tensor, orig_shape
+        return rgb_img, input_tensor, orig_shape
 
 
 
@@ -159,8 +159,8 @@ class IronDefectModel(BasicModel):
             class_counts = {name: 0 for name in self.class_names}
             return "OK", "未检测到任何缺陷", class_counts
         
-        # 获取检测到的类别ID
-        detected_class_ids = detections['class'].astype(int).tolist()
+        # 获取检测到的类别ID（第6列）
+        detected_class_ids = detections[:, 5].astype(int).tolist()
         
         # 统计每个类别的检测数量
         class_counts={}
@@ -177,99 +177,81 @@ class IronDefectModel(BasicModel):
 
     def visualize_results(self, image, detections, status, message, class_counts):
         """
-        可视化检测结果
-        :param image: 原始图像 (RGB格式)
-        :param detections: 检测结果DataFrame
-        :param status: 检测状态 ("OK" 或 "NG")
+        在图像上绘制检测框和标注，并返回可视化后的图像（PIL Image）
+        :param image: 原始图像，numpy.ndarray, shape (H, W, 3) or (H, W), dtype uint8
+        :param detections: 检测结果，numpy.ndarray, shape (n, 6) → [x1, y1, x2, y2, conf, cls]
+        :param status: "OK" 或 "NG"
         :param message: 状态描述
-        :param class_counts: 每个类别的检测数量
-        :return: 可视化后的图像 (RGB格式)
+        :param class_counts: dict, 各类别数量
+        :return: PIL.Image 对象
         """
-        # 将numpy数组转换为PIL图像以便绘制中文
+
+        # ========== 1. 检查并修复图像格式 ==========
+        if not isinstance(image, np.ndarray):
+            raise TypeError("image 必须是 numpy.ndarray")
+
+        # 如果是 float 类型，转 uint8
+        if image.dtype in [np.float32, np.float64]:
+            if image.max() <= 1.0:
+                image = (image * 255).clip(0, 255).astype(np.uint8)
+            else:
+                image = image.clip(0, 255).astype(np.uint8)
+
+        # 如果是单通道灰度图 (H, W, 1) → 去掉最后一维
+        if image.ndim == 3 and image.shape[2] == 1:
+            image = image[:, :, 0]
+
+        # 如果是单像素图像，放大便于查看（可选）
+        if image.shape[0] <= 1 or image.shape[1] <= 1:
+            scale = max(100 // image.shape[0], 100 // image.shape[1], 1)
+            image = np.repeat(np.repeat(image, scale, axis=0), scale, axis=1)
+
+        # 转 PIL Image
         pil_img = Image.fromarray(image)
         draw = ImageDraw.Draw(pil_img)
-        
-        # 设置字体
+
+        # 尝试加载中文字体（如无，用默认字体）
         try:
-            # 尝试加载中文字体 (需要系统中存在该字体)
-            font = ImageFont.truetype("simhei.ttf", 40)
-            small_font = ImageFont.truetype("simhei.ttf", 30)
+            font = ImageFont.truetype("simhei.ttf", size=20)  # Windows 黑体
         except:
-            # 如果无法加载中文字体，使用默认字体
-            font = ImageFont.load_default(100)
-            small_font = ImageFont.load_default(80)
-        
-        # 绘制每个检测框
-        for _, det in detections.iterrows():
-            # 解析检测框坐标
-            x1, y1, x2, y2 = int(det['xmin']), int(det['ymin']), int(det['xmax']), int(det['ymax'])
-            
-            # 获取类别信息
-            class_id = int(det['class'])
-            class_name = self.class_names[class_id]
-            confidence = det['confidence']
-            
-            # 根据状态选择颜色
-            if status == "OK":
-                color = (0, 255, 0)  # 绿色
-            else:
-                color = (255, 0, 0)  # 红色
-            
-            # 绘制边界框
-            draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
-            
-            # 绘制类别标签
-            label = f"{class_name} {confidence:.2f}"
+            try:
+                font = ImageFont.truetype("arial.ttf", size=20)
+            except:
+                font = ImageFont.load_default()
 
-            # 使用 textbbox 获取文本边界框
-            bbox = draw.textbbox((0, 0), label, font=font)
-            text_width = bbox[2] - bbox[0]  # right - left
-            text_height = bbox[3] - bbox[1]  # bottom - top
-            
-            # 绘制文本背景
-            draw.rectangle(
-                [x1, y1 - text_height - 5, x1 + text_width, y1], 
-                fill=color
-            )
-            
-            # 绘制文本
-            draw.text(
-                (x1, y1 - text_height - 5), 
-                label, 
-                fill=(255, 255, 255), 
-                font=font
-            )
-        
-        # 添加状态文本
-        status_color = (0, 200, 0) if status == "OK" else (255, 0, 0)
-        draw.text((50, 50), f"检测结果: {status}", fill=status_color, font=font)
-        
-        # 添加类别统计信息
-        stats_y = 100
+        # ========== 2. 绘制检测框和标签 ==========
+        if len(detections) > 0:
+            for det in detections:
+                x1, y1, x2, y2, conf, cls_id = det
+                cls_id = int(cls_id)  # ← 关键！转成整数
+
+                # 防止越界
+                if cls_id < 0 or cls_id >= len(self.class_names):
+                    continue
+
+                class_name = self.class_names[cls_id]
+
+                # 画框
+                draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+
+                # 写标签：类别 + 置信度
+                label = f"{class_name} {conf:.2f}"
+                text_bbox = draw.textbbox((x1, y1 - 25), label, font=font)
+                draw.rectangle(text_bbox, fill="red")
+                draw.text((x1, y1 - 25), label, fill="white", font=font)
+
+        # ========== 3. 在左上角写全局状态信息 ==========
+        status_text = f"状态: {status} | {message}"
+        draw.text((10, 10), status_text, fill="green" if status == "OK" else "red", font=font)
+
+        # 在左上角下方写类别统计
+        y_offset = 40
         for class_name, count in class_counts.items():
-            required = "ok" if count == 1 else "ng"
-            color = (0, 200, 0) if count == 1 else (255, 0, 0)
-            
-            stats_text = f"{class_name}: {count}个 ({required})"
-            draw.text((50, stats_y), stats_text, fill=color, font=font)
-            stats_y += 50
-        
-        # 添加总检测数量
-        total_detections = len(detections)
+            if count > 0:
+                draw.text((10, y_offset), f"{class_name}: {count}", fill="blue", font=font)
+                y_offset += 25
 
-        draw.text(
-            (50, stats_y + 20),
-            f"总检测数: {total_detections}个 ({status}- {message})",
-            fill=status_color,
-            font=font
-        )
-        
-        # 添加时间戳
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        draw.text((50, pil_img.height - 60), timestamp, fill=(200, 200, 200), font=small_font)
-        
-        # 转换回numpy数组
-        return np.array(pil_img)
+        return pil_img  # 返回 PIL Image，可 .save() 或 .show()
 
     def process_image(self, image_path, output_dir="results"):
         """
@@ -301,7 +283,7 @@ class IronDefectModel(BasicModel):
             # 保存结果图像
             result_filename = f"result_{Path(image_path).name}"
             result_filepath = output_path / result_filename
-            cv2.imwrite(str(result_filepath), cv2.cvtColor(result_img, cv2.COLOR_RGB2BGR))
+            result_img.save(result_filepath)
             logger.info(f"结果已保存至: {result_filepath}")
             
             # 保存检测结果到CSV
@@ -317,36 +299,40 @@ class IronDefectModel(BasicModel):
         """
         保存检测结果到CSV文件
         :param image_path: 原始图像路径
-        :param detections: 检测结果
+        :param detections: 检测结果(numpy.ndarray)
         :param status: 检测状态
         :param output_dir: 输出目录
         """
+        # 创建输出目录（如果不存在）
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
         # 创建CSV文件路径
         csv_path = output_dir / "detection_results.csv"
-        
+
         # 准备数据
         data = {
-            "timestamp": [time.strftime("%Y-%m-%d %H:%M:%S")],
-            "image_path": [image_path],
-            "status": [status],
-            "total_detections": [len(detections)],
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "image_path": str(image_path),
+            "status": status,
+            "total_detections": len(detections),
         }
-        
+
         # 添加每个类别的检测数量
         for class_id in range(self.num_classes):
             class_name = self.class_names[class_id]
-            count = len(detections[detections['class'] == class_id])
-            data[f"{class_name}_count"] = [count]
-        
-        # 创建DataFrame
-        df = pd.DataFrame(data)
-        
+            count = len(detections[detections[:, 5] == class_id])  # 假设class_id位于detections的最后一列
+            data[f"{class_name}_count"] = count
+
+        # 将字典转换为DataFrame
+        df = pd.DataFrame([data])  # 注意这里的[]，因为data是一个字典而不是字典列表
+
         # 保存到CSV (追加模式)
         if csv_path.exists():
             df.to_csv(csv_path, mode='a', header=False, index=False)
         else:
             df.to_csv(csv_path, index=False)
-        
+
         logger.info(f"检测结果已保存到CSV: {csv_path}")
 
     def process_batch(self, image_dir, output_dir="results"):
