@@ -201,6 +201,16 @@ class IronDefectModel(BasicModel):
         if image.ndim == 3 and image.shape[2] == 1:
             image = image[:, :, 0]
 
+        # 获取原始图像尺寸
+        orig_height, orig_width = image.shape[:2]
+        # YOLO模型输入尺寸
+        model_input_size = 640
+        
+        # 计算缩放比例 - 将640x640的检测框映射回原始图像尺寸
+        scale_x = orig_width / model_input_size
+        scale_y = orig_height / model_input_size
+        logger.info(f"缩放比例 - X轴: {scale_x:.2f}, Y轴: {scale_y:.2f}")
+
         # 如果是单像素图像，放大便于查看（可选）
         if image.shape[0] <= 1 or image.shape[1] <= 1:
             scale = max(100 // image.shape[0], 100 // image.shape[1], 1)
@@ -230,15 +240,27 @@ class IronDefectModel(BasicModel):
                     continue
 
                 class_name = self.class_names[cls_id]
+                
+                # 重要修复：将检测框坐标从640x640映射回原始图像尺寸
+                x1_orig = int(x1 * scale_x)
+                y1_orig = int(y1 * scale_y)
+                x2_orig = int(x2 * scale_x)
+                y2_orig = int(y2 * scale_y)
+                
+                # 确保坐标在有效范围内
+                x1_orig = max(0, x1_orig)
+                y1_orig = max(0, y1_orig)
+                x2_orig = min(orig_width, x2_orig)
+                y2_orig = min(orig_height, y2_orig)
 
-                # 画框
-                draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+                # 画框 - 使用转换后的坐标
+                draw.rectangle([x1_orig, y1_orig, x2_orig, y2_orig], outline="red", width=3)
 
                 # 写标签：类别 + 置信度
                 label = f"{class_name} {conf:.2f}"
-                text_bbox = draw.textbbox((x1, y1 - 25), label, font=font)
+                text_bbox = draw.textbbox((x1_orig, y1_orig - 25), label, font=font)
                 draw.rectangle(text_bbox, fill="red")
-                draw.text((x1, y1 - 25), label, fill="white", font=font)
+                draw.text((x1_orig, y1_orig - 25), label, fill="white", font=font)
 
         # ========== 3. 在左上角写全局状态信息 ==========
         status_text = f"状态: {status} | {message}"
