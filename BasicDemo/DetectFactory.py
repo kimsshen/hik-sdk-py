@@ -12,6 +12,6 @@ class DetectFactory:
         if detector_type.lower() == "ironclassify":
             return IronClassifyModel(model_path=model_path,conf_threshold=0.75,iou_threshold=0.45)
         elif detector_type.lower() == "irondefect":
-            return IronDefectModel(model_path=model_path,conf_threshold=0.75,iou_threshold=0.45)
+            return IronDefectModel(model_path=model_path,img_size=1024,conf_threshold=0.55,iou_threshold=0.45)
         else:
             raise ValueError(f"不支持的检测器类型: {detector_type}")

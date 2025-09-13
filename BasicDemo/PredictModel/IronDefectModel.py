@@ -36,7 +36,7 @@ logger = logging.getLogger("PackagingInspector")
 
 class IronDefectModel(BasicModel):
 
-    def __init__(self, model_path, conf_threshold=0.6, iou_threshold=0.45):
+    def __init__(self, model_path, img_size=640, conf_threshold=0.6, iou_threshold=0.45):
         """
         初始化包装检测系统
         :param model_path: 训练好的模型权重路径
@@ -69,6 +69,9 @@ class IronDefectModel(BasicModel):
         
         # 创建颜色映射 (每个类别一个颜色)
         self.colors = self._generate_colors(self.num_classes)
+
+        #模型输入尺寸
+        self.img_size = img_size
         
         logger.info(f"模型加载成功! 使用设备: {self.device}")
         logger.info(f"检测类别: {self.class_names}")
@@ -175,7 +178,7 @@ class IronDefectModel(BasicModel):
             
         return "NG", "存在缺陷", class_counts
 
-    def visualize_results(self, image, detections, status, message, class_counts):
+    def visualize_results(self, image, img_size, detections, status, message, class_counts):
         """
         在图像上绘制检测框和标注，并返回可视化后的图像（PIL Image）
         :param image: 原始图像，numpy.ndarray, shape (H, W, 3) or (H, W), dtype uint8
@@ -204,7 +207,7 @@ class IronDefectModel(BasicModel):
         # 获取原始图像尺寸
         orig_height, orig_width = image.shape[:2]
         # YOLO模型输入尺寸
-        model_input_size = 640
+        model_input_size = img_size
         
         # 计算缩放比例 - 将640x640的检测框映射回原始图像尺寸
         scale_x = orig_width / model_input_size
@@ -286,7 +289,7 @@ class IronDefectModel(BasicModel):
         
         try:
             # 加载图像
-            original_img, input_tensor, orig_shape = self.load_image(image_path)
+            original_img, input_tensor, orig_shape = self.load_image(image_path,self.img_size)
             
             # 执行物体检测
             detections = self.detect_objects(input_tensor)
@@ -296,7 +299,7 @@ class IronDefectModel(BasicModel):
             logger.info(f"检测结果: {status} - {message}")
             
             # 可视化结果
-            result_img = self.visualize_results(original_img, detections, status, message, class_counts)
+            result_img = self.visualize_results(original_img, self.img_size, detections, status, message, class_counts)
             
             # 创建输出目录
             output_path = Path(output_dir)
